@@ -11,13 +11,20 @@ import org.cloudburstmc.protocol.bedrock.packet.AddEntityPacket;
 import org.cloudburstmc.protocol.bedrock.packet.AddPlayerPacket;
 import org.cloudburstmc.protocol.bedrock.packet.BedrockPacket;
 import org.cloudburstmc.protocol.bedrock.packet.BlockEntityDataPacket;
+import org.cloudburstmc.protocol.bedrock.packet.BlockEventPacket;
+import org.cloudburstmc.protocol.bedrock.packet.ContainerOpenPacket;
 import org.cloudburstmc.protocol.bedrock.packet.LevelChunkPacket;
+import org.cloudburstmc.protocol.bedrock.packet.LevelEventPacket;
+import org.cloudburstmc.protocol.bedrock.packet.LevelSoundEventPacket;
 import org.cloudburstmc.protocol.bedrock.packet.MoveEntityAbsolutePacket;
 import org.cloudburstmc.protocol.bedrock.packet.MoveEntityDeltaPacket;
 import org.cloudburstmc.protocol.bedrock.packet.MovePlayerPacket;
 import org.cloudburstmc.protocol.bedrock.packet.NetworkChunkPublisherUpdatePacket;
+import org.cloudburstmc.protocol.bedrock.packet.PlaySoundPacket;
 import org.cloudburstmc.protocol.bedrock.packet.RespawnPacket;
+import org.cloudburstmc.protocol.bedrock.packet.SpawnParticleEffectPacket;
 import org.cloudburstmc.protocol.bedrock.packet.UpdateBlockPacket;
+import org.cloudburstmc.protocol.bedrock.packet.UpdateSubChunkBlocksPacket;
 import org.geysermc.geyser.session.GeyserSession;
 
 /**
@@ -49,6 +56,12 @@ public final class BedrockCoordinatePacketTranslator {
             publisherUpdatePacket.setPosition(coordinates.toBedrock(publisherUpdatePacket.getPosition()));
         } else if (packet instanceof UpdateBlockPacket updateBlockPacket) {
             updateBlockPacket.setBlockPosition(coordinates.toBedrock(updateBlockPacket.getBlockPosition()));
+        } else if (packet instanceof UpdateSubChunkBlocksPacket updateSubChunkBlocksPacket) {
+            updateSubChunkBlocksPacket.setPosition(coordinates.toBedrock(updateSubChunkBlocksPacket.getPosition()));
+        } else if (packet instanceof BlockEventPacket blockEventPacket) {
+            blockEventPacket.setBlockPosition(coordinates.toBedrock(blockEventPacket.getBlockPosition()));
+        } else if (packet instanceof ContainerOpenPacket containerOpenPacket) {
+            containerOpenPacket.setBlockPosition(coordinates.toBedrock(containerOpenPacket.getBlockPosition()));
         } else if (packet instanceof BlockEntityDataPacket blockEntityPacket) {
             Vector3i position = coordinates.toBedrock(blockEntityPacket.getBlockPosition());
             blockEntityPacket.setBlockPosition(position);
@@ -70,6 +83,14 @@ public final class BedrockCoordinatePacketTranslator {
             movePlayerPacket.setPosition(coordinates.toBedrock(movePlayerPacket.getPosition()));
         } else if (packet instanceof RespawnPacket respawnPacket) {
             respawnPacket.setPosition(coordinates.toBedrock(respawnPacket.getPosition()));
+        } else if (packet instanceof LevelEventPacket levelEventPacket) {
+            levelEventPacket.setPosition(coordinates.toBedrock(levelEventPacket.getPosition()));
+        } else if (packet instanceof LevelSoundEventPacket levelSoundEventPacket) {
+            levelSoundEventPacket.setPosition(coordinates.toBedrock(levelSoundEventPacket.getPosition()));
+        } else if (packet instanceof PlaySoundPacket playSoundPacket) {
+            playSoundPacket.setPosition(coordinates.toBedrock(playSoundPacket.getPosition()));
+        } else if (packet instanceof SpawnParticleEffectPacket particleEffectPacket) {
+            particleEffectPacket.setPosition(coordinates.toBedrock(particleEffectPacket.getPosition()));
         }
     }
 
