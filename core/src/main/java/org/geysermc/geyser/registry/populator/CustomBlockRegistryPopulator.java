@@ -230,14 +230,21 @@ public class CustomBlockRegistryPopulator {
             return;
         }
 
+        int vanillaRuntimeIdCount = BlockRegistries.BLOCK_STATES.get().size();
         MIN_CUSTOM_RUNTIME_ID = BlockRegistries.NON_VANILLA_BLOCK_STATE_OVERRIDES.get().keySet().stream().min(Comparator.comparing(JavaBlockState::javaId)).orElseThrow().javaId();
         int maxCustomRuntimeID = BlockRegistries.NON_VANILLA_BLOCK_STATE_OVERRIDES.get().keySet().stream().max(Comparator.comparing(JavaBlockState::javaId)).orElseThrow().javaId();
 
-        if (MIN_CUSTOM_RUNTIME_ID < BlockRegistries.BLOCK_STATES.get().size()) {
-            throw new RuntimeException("Non vanilla custom block state overrides runtime ID must start after the last vanilla block state (" + JAVA_BLOCKS_SIZE + ")");
+        if (MIN_CUSTOM_RUNTIME_ID < vanillaRuntimeIdCount) {
+            /*
+             * A 1.21.4 Fabric backend numbers mod states immediately after that
+             * version's vanilla palette. A newer Geyser palette has since added
+             * vanilla states in the same numeric range. The backend cannot send
+             * those newer states, so Xintinglei manifests replace explicit IDs only.
+             */
+            GeyserImpl.getInstance().getLogger().info("Registering legacy Fabric block states inside the newer vanilla runtime-ID range.");
         }
 
-        JAVA_BLOCKS_SIZE = maxCustomRuntimeID + 1; // Runtime ids start at 0, so we need to add 1
+        JAVA_BLOCKS_SIZE = Math.max(vanillaRuntimeIdCount, maxCustomRuntimeID + 1); // Runtime ids start at 0
 
         // Now: Vanilla blocks are already loaded and registered; let's load non-vanilla properly too
         IntSet usedNonVanillaRuntimeIDs = new IntOpenHashSet();

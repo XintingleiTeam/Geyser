@@ -59,6 +59,12 @@ public class JavaLoginFinishedTranslator extends PacketTranslator<ClientboundLog
         // Check if they are not using a linked account
         if (remoteAuthType == AuthType.OFFLINE || playerEntity.uuid().getMostSignificantBits() == 0) {
             SkinManager.handleBedrockSkin(playerEntity, session.getClientData());
+        } else {
+            // A linked Floodgate player has a Java game profile supplied by the
+            // proxy. Re-send that profile's skin to the local Bedrock player as
+            // well, so third-person view matches the linked Blessing Skin role
+            // instead of only changing what other players see.
+            playerEntity.setSkin(profile.getTextures(false), null);
         }
 
         if (session.getGeyser().getSkinUploader() != null) {

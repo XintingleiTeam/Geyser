@@ -56,6 +56,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.net.HttpURLConnection;
+import java.net.URI;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
@@ -626,7 +627,7 @@ public class SkinProvider {
     }
 
     private static BufferedImage downloadImage(String imageUrl) throws IOException {
-        if (!TextureUrlChecker.isAllowedTextureDomain(imageUrl)) {
+        if (!isAllowedTextureUrl(imageUrl)) {
             return EMPTY_SKIN_IMAGE;
         }
         HttpURLConnection con = (HttpURLConnection) new URL(imageUrl).openConnection();
@@ -640,6 +641,27 @@ public class SkinProvider {
             throw new IllegalArgumentException("Failed to read image from: %s".formatted(imageUrl));
         }
         return image;
+    }
+
+    /**
+     * Java profile texture URLs are normally restricted to Mojang's CDN. Linked
+     * Xintinglei accounts intentionally use the site's Yggdrasil-compatible
+     * texture endpoint, so permit that one HTTPS origin and nothing broader.
+     */
+    private static boolean isAllowedTextureUrl(String imageUrl) {
+        if (TextureUrlChecker.isAllowedTextureDomain(imageUrl)) {
+            return true;
+        }
+
+        try {
+            URI uri = URI.create(imageUrl);
+            return "https".equalsIgnoreCase(uri.getScheme())
+                    && uri.getUserInfo() == null
+                    && "skin.xintinglei.cn".equalsIgnoreCase(uri.getHost())
+                    && (uri.getPort() == -1 || uri.getPort() == 443);
+        } catch (IllegalArgumentException exception) {
+            return false;
+        }
     }
 
     public static BufferedImage scale(BufferedImage bufferedImage, int newWidth, int newHeight) {

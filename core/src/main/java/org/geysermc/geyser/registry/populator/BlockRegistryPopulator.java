@@ -206,6 +206,14 @@ public final class BlockRegistryPopulator {
                 }
             }
 
+            // Non-vanilla Fabric states must be considered during this first palette pass.
+            // Waiting until the final array override is too late: a legacy state ID can overlap
+            // a newer vanilla ID and would otherwise be looked up as an unknown vanilla block.
+            var nonVanillaCustomStatesByRuntimeId = new Int2ObjectOpenHashMap<CustomBlockState>();
+            for (Map.Entry<JavaBlockState, CustomBlockState> entry : BlockRegistries.NON_VANILLA_BLOCK_STATE_OVERRIDES.get().entrySet()) {
+                nonVanillaCustomStatesByRuntimeId.put(entry.getKey().javaId(), entry.getValue());
+            }
+
             int javaRuntimeId = -1;
 
             List<BlockState> javaBlockStates = BlockRegistries.BLOCK_STATES.get();
@@ -257,6 +265,9 @@ public final class BlockRegistryPopulator {
 
                 GeyserBedrockBlock bedrockDefinition;
                 CustomBlockState blockStateOverride = BlockRegistries.CUSTOM_BLOCK_STATE_OVERRIDES.get(javaRuntimeId);
+                if (blockStateOverride == null) {
+                    blockStateOverride = nonVanillaCustomStatesByRuntimeId.get(javaRuntimeId);
+                }
                 if (blockStateOverride == null) {
                     bedrockDefinition = vanillaBedrockDefinition;
                     if (bedrockDefinition == null) {
@@ -360,9 +371,13 @@ public final class BlockRegistryPopulator {
 
             Map<JavaBlockState, CustomBlockState> nonVanillaStateOverrides = BlockRegistries.NON_VANILLA_BLOCK_STATE_OVERRIDES.get();
             if (!nonVanillaStateOverrides.isEmpty()) {
-                // First ensure all non vanilla runtime IDs at minimum are air in case they aren't consecutive
-                Arrays.fill(javaToVanillaBedrockBlocks, MIN_CUSTOM_RUNTIME_ID, javaToVanillaBedrockBlocks.length, airDefinition);
-                Arrays.fill(javaToBedrockBlocks, MIN_CUSTOM_RUNTIME_ID, javaToBedrockBlocks.length, airDefinition);
+                // IDs appended after the vanilla palette need empty gaps filled with air.
+                // Legacy Fabric IDs live inside a newer palette, so filling the whole tail
+                // would erase valid vanilla mappings; their explicit IDs are replaced below.
+                if (MIN_CUSTOM_RUNTIME_ID >= BLOCKS_NBT.size()) {
+                    Arrays.fill(javaToVanillaBedrockBlocks, MIN_CUSTOM_RUNTIME_ID, javaToVanillaBedrockBlocks.length, airDefinition);
+                    Arrays.fill(javaToBedrockBlocks, MIN_CUSTOM_RUNTIME_ID, javaToBedrockBlocks.length, airDefinition);
+                }
 
                 for (Map.Entry<JavaBlockState, CustomBlockState> entry : nonVanillaStateOverrides.entrySet()) {
                     GeyserBedrockBlock bedrockDefinition = customBlockStateDefinitions.get(entry.getValue());
