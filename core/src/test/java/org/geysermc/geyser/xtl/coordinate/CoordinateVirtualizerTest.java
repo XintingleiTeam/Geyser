@@ -77,4 +77,19 @@ class CoordinateVirtualizerTest {
         Assertions.assertEquals(firstWindowChunk, virtualizer.removeSentChunk(125_000, -125_000));
         Assertions.assertEquals(Vector3i.from(0, 0, -250_000), virtualizer.removeSentChunk(125_000, -125_000));
     }
+
+    @Test
+    void hidesEntitiesOutsideTheSafeClientWindow() {
+        CoordinateVirtualizer virtualizer = new CoordinateVirtualizer();
+        virtualizer.apply(virtualizer.planInitialOrigin(Vector3d.from(200_000, 80, 0), CoordinateVirtualizer.RebaseReason.SERVER_SWITCH));
+
+        Assertions.assertTrue(virtualizer.isWithinEntityWindow(Vector3f.from(249_999, 80, 0)));
+        Assertions.assertFalse(virtualizer.isWithinEntityWindow(Vector3f.from(250_000, 80, 0)));
+
+        virtualizer.markEntityVisible(47L);
+        Assertions.assertTrue(virtualizer.isEntityVisible(47L));
+        Assertions.assertTrue(virtualizer.markEntityHidden(47L));
+        Assertions.assertFalse(virtualizer.isEntityVisible(47L));
+        Assertions.assertFalse(virtualizer.markEntityHidden(47L));
+    }
 }

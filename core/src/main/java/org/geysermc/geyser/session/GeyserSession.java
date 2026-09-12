@@ -2147,8 +2147,9 @@ public class GeyserSession implements GeyserConnection, GeyserCommandSource {
      * @param packet the bedrock packet from the Cloudburst protocol lib
      */
     public void sendUpstreamPacket(BedrockPacket packet) {
-        BedrockCoordinatePacketTranslator.translate(this, packet);
-        upstream.sendPacket(packet);
+        if (BedrockCoordinatePacketTranslator.translate(this, packet)) {
+            upstream.sendPacket(packet);
+        }
     }
 
     /**
@@ -2157,8 +2158,9 @@ public class GeyserSession implements GeyserConnection, GeyserCommandSource {
      * @param packet the bedrock packet from the Cloudburst protocol lib
      */
     public void sendUpstreamPacketImmediately(BedrockPacket packet) {
-        BedrockCoordinatePacketTranslator.translate(this, packet);
-        upstream.sendPacketImmediately(packet);
+        if (BedrockCoordinatePacketTranslator.translate(this, packet)) {
+            upstream.sendPacketImmediately(packet);
+        }
     }
 
     /**

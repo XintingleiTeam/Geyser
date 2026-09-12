@@ -27,6 +27,7 @@ import org.cloudburstmc.math.vector.Vector3f;
 import org.cloudburstmc.math.vector.Vector3i;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -56,6 +57,8 @@ public final class CoordinateVirtualizer {
     private long originZ;
     /** The exact virtual chunk coordinate last sent for each Java chunk. */
     private final Map<Long, Vector3i> sentChunks = new HashMap<>();
+    /** Entities which have a client-side spawn in the current Bedrock coordinate window. */
+    private final HashSet<Long> visibleEntities = new HashSet<>();
     /** Java packets are retained only for a window refresh; they are never used as world state. */
     private final LinkedHashMap<Long, ClientboundLevelChunkWithLightPacket> cachedChunkPackets = new LinkedHashMap<>();
     private static final int MAX_CACHED_CHUNKS = 2_048;
@@ -171,6 +174,7 @@ public final class CoordinateVirtualizer {
     public void clearChunkState() {
         sentChunks.clear();
         cachedChunkPackets.clear();
+        visibleEntities.clear();
     }
 
     public List<Vector3i> drainSentChunks() {
@@ -181,6 +185,28 @@ public final class CoordinateVirtualizer {
 
     public boolean isWithinHardLimit(Vector3d javaPosition) {
         return Math.abs(javaPosition.getX() - originX) < hardLimit && Math.abs(javaPosition.getZ() - originZ) < hardLimit;
+    }
+
+    /**
+     * Entity coordinates use a stricter window than the protocol hard limit. This gives the
+     * client enough precision headroom and prevents a long-flying projectile from leaking a
+     * huge coordinate before the player itself has rebased.
+     */
+    public boolean isWithinEntityWindow(Vector3f javaPosition) {
+        return Math.abs(javaPosition.getX() - originX) < pageSize && Math.abs(javaPosition.getZ() - originZ) < pageSize;
+    }
+
+    public void markEntityVisible(long geyserId) {
+        visibleEntities.add(geyserId);
+    }
+
+    /** @return true when a client-side entity existed and needs removing. */
+    public boolean markEntityHidden(long geyserId) {
+        return visibleEntities.remove(geyserId);
+    }
+
+    public boolean isEntityVisible(long geyserId) {
+        return visibleEntities.contains(geyserId);
     }
 
     /**
