@@ -60,6 +60,7 @@ import org.geysermc.geyser.text.MinecraftLocale;
 import org.geysermc.geyser.translator.text.MessageTranslator;
 import org.geysermc.geyser.util.InventoryUtils;
 import org.geysermc.geyser.util.MinecraftKey;
+import org.geysermc.geyser.xtl.item.XintingleiDrinkItemResolver;
 import org.geysermc.mcprotocollib.auth.GameProfile;
 import org.geysermc.mcprotocollib.auth.texture.Texture;
 import org.geysermc.mcprotocollib.auth.texture.TextureType;
@@ -188,6 +189,16 @@ public final class ItemTranslator {
     }
 
     public static ItemData.@NonNull Builder translateToBedrock(GeyserSession session, Item javaItem, ItemMapping bedrockItem, int count, @Nullable DataComponents customComponents) {
+        // A 1.21.4 Fabric registry export can occupy IDs which a newer Java protocol assigns to
+        // vanilla items. DrinksDataPack items are always honey bottles, so resolve their explicit
+        // custom-model marker before using the numeric registry mapping. The extension then picks
+        // the correct drinks:* Bedrock definition in the regular custom-item path below.
+        ItemMapping drinkBaseMapping = XintingleiDrinkItemResolver.resolve(session, customComponents);
+        if (drinkBaseMapping != null) {
+            javaItem = drinkBaseMapping.getJavaItem();
+            bedrockItem = drinkBaseMapping;
+        }
+
         BedrockItemBuilder nbtBuilder = new BedrockItemBuilder();
 
         // Populates default components that aren't sent over the network
