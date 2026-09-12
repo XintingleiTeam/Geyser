@@ -73,10 +73,11 @@ public class BedrockStructureTemplateDataRequestTranslator extends PacketTransla
 
             // Request a "structure load" from Java server, so it sends us the structure's size
             // See the block entity translator for more info
-            session.getStructureBlockCache().setCurrentStructureBlock(packet.getPosition());
+            Vector3i structureBlockPosition = session.getCoordinateVirtualizer().toJava(packet.getPosition());
+            session.getStructureBlockCache().setCurrentStructureBlock(structureBlockPosition);
 
             StructureBlockUtils.sendJavaStructurePacket(session,
-                    packet.getPosition(),
+                    structureBlockPosition,
                     Vector3i.ZERO, // We expect the Java server to tell us the size
                     UpdateStructureBlockMode.LOAD,
                     UpdateStructureBlockAction.LOAD_STRUCTURE,

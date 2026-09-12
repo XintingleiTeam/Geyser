@@ -58,7 +58,7 @@ public class BedrockStructureBlockUpdateTranslator extends PacketTranslator<Stru
             default -> UpdateStructureBlockMode.SAVE;
         };
 
-        StructureBlockUtils.sendJavaStructurePacket(session, packet.getBlockPosition(), data.getSettings().getSize(), mode, action, data.getSettings(),
+        StructureBlockUtils.sendJavaStructurePacket(session, session.getCoordinateVirtualizer().toJava(packet.getBlockPosition()), data.getSettings().getSize(), mode, action, data.getSettings(),
                 data.isBoundingBoxVisible(), data.getName());
         session.getStructureBlockCache().clear();
     }

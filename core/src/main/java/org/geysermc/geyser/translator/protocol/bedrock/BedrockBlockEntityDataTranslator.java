@@ -107,13 +107,13 @@ public class BedrockBlockEntityDataTranslator extends PacketTranslator<BlockEnti
             }
             // Put the final line on since it isn't done in the for loop
             if (iterator < lines.length) lines[iterator] = newMessage.toString();
-            Vector3i pos = Vector3i.from(tag.getInt("x"), tag.getInt("y"), tag.getInt("z"));
+            Vector3i pos = session.getCoordinateVirtualizer().toJava(Vector3i.from(tag.getInt("x"), tag.getInt("y"), tag.getInt("z")));
             ServerboundSignUpdatePacket signUpdatePacket = new ServerboundSignUpdatePacket(pos, lines, session.getWorldCache().isEditingSignOnFront());
             session.sendDownstreamGamePacket(signUpdatePacket);
 
         } else if (id.equals("JigsawBlock")) {
             // Client has just sent a jigsaw block update
-            Vector3i pos = Vector3i.from(tag.getInt("x"), tag.getInt("y"), tag.getInt("z"));
+            Vector3i pos = session.getCoordinateVirtualizer().toJava(Vector3i.from(tag.getInt("x"), tag.getInt("y"), tag.getInt("z")));
             String name = tag.getString("name");
             String target = tag.getString("target");
             String pool = tag.getString("target_pool");
