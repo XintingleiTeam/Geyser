@@ -118,7 +118,8 @@ public class CustomItemRegistryPopulator {
     private static final Set<String> XINTINGLEI_LEGACY_ITEM_NAMESPACES = Set.of(
         "better_mcdonalds_mod",
         "happy_ghast_legacy",
-        "thecopperrail"
+        "thecopperrail",
+        "centifolia"
     );
 
     public static void populate(Map<String, GeyserMappingItem> items, Multimap<Identifier, CustomItemDefinition> customItems,
