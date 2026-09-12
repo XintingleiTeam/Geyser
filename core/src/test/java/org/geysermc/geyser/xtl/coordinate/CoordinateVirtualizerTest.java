@@ -75,5 +75,6 @@ class CoordinateVirtualizerTest {
 
         Assertions.assertEquals(Vector3i.from(125_000, 0, -125_000), firstWindowChunk);
         Assertions.assertEquals(firstWindowChunk, virtualizer.removeSentChunk(125_000, -125_000));
+        Assertions.assertEquals(Vector3i.from(0, 0, 0), virtualizer.removeSentChunk(125_000, -125_000));
     }
 }

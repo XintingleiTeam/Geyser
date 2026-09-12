@@ -147,7 +147,9 @@ public final class CoordinateVirtualizer {
      * the active origin is correct for chunks which were never emitted by this session.
      */
     public Vector3i removeSentChunk(int javaChunkX, int javaChunkZ) {
-        Vector3i stored = sentChunks.remove(chunkKey(javaChunkX, javaChunkZ));
+        long key = chunkKey(javaChunkX, javaChunkZ);
+        cachedChunkPackets.remove(key);
+        Vector3i stored = sentChunks.remove(key);
         return stored != null ? stored : toBedrockChunk(javaChunkX, javaChunkZ);
     }
 
