@@ -84,6 +84,12 @@ public class JavaLevelChunkWithLightTranslator extends PacketTranslator<Clientbo
 
     @Override
     public void translate(GeyserSession session, ClientboundLevelChunkWithLightPacket packet) {
+        session.getCoordinateVirtualizer().rememberChunkPacket(packet);
+        translateCachedChunk(session, packet);
+    }
+
+    /** Re-encodes a real Java chunk into the active Bedrock coordinate window after a rebase. */
+    public static void translateCachedChunk(GeyserSession session, ClientboundLevelChunkWithLightPacket packet) {
         if (session.isSpawned()) {
             ChunkUtils.updateChunkPosition(session, session.getPlayerEntity().position().toInt());
         }

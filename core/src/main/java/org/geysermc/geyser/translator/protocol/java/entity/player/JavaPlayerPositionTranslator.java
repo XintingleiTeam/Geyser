@@ -39,6 +39,7 @@ import org.geysermc.geyser.translator.protocol.Translator;
 import org.geysermc.geyser.util.ChunkUtils;
 import org.geysermc.geyser.util.MathUtils;
 import org.geysermc.geyser.xtl.coordinate.CoordinateVirtualizer;
+import org.geysermc.geyser.xtl.coordinate.CoordinateRebaseCoordinator;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.player.PositionElement;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.player.ClientboundPlayerPositionPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.level.ServerboundAcceptTeleportationPacket;
@@ -75,8 +76,7 @@ public class JavaPlayerPositionTranslator extends PacketTranslator<ClientboundPl
         } else {
             CoordinateVirtualizer.RebasePlan rebase = coordinateVirtualizer.planRebase(entity.position().toDouble(), position);
             if (rebase != null) {
-                coordinateVirtualizer.apply(rebase);
-                session.setLastChunkPosition(null);
+                CoordinateRebaseCoordinator.rebase(session, rebase);
                 session.getGeyser().getLogger().debug("Rebased Bedrock coordinate window to "
                     + rebase.originX() + ", " + rebase.originZ() + " (" + rebase.reason() + ")");
             }

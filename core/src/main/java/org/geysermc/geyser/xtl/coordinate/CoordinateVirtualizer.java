@@ -27,7 +27,11 @@ import org.cloudburstmc.math.vector.Vector3f;
 import org.cloudburstmc.math.vector.Vector3i;
 
 import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
+
+import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.level.ClientboundLevelChunkWithLightPacket;
 
 /**
  * Per-session translation between the real Java world and the bounded coordinate window shown
@@ -52,6 +56,9 @@ public final class CoordinateVirtualizer {
     private long originZ;
     /** The exact virtual chunk coordinate last sent for each Java chunk. */
     private final Map<Long, Vector3i> sentChunks = new HashMap<>();
+    /** Java packets are retained only for a window refresh; they are never used as world state. */
+    private final LinkedHashMap<Long, ClientboundLevelChunkWithLightPacket> cachedChunkPackets = new LinkedHashMap<>();
+    private static final int MAX_CACHED_CHUNKS = 2_048;
 
     public CoordinateVirtualizer() {
         this(DEFAULT_PAGE_SIZE, DEFAULT_REBASE_THRESHOLD, DEFAULT_HARD_LIMIT, DEFAULT_LONG_DISTANCE_TELEPORT_THRESHOLD);
@@ -146,6 +153,28 @@ public final class CoordinateVirtualizer {
 
     public void clearSentChunks() {
         sentChunks.clear();
+    }
+
+    public void rememberChunkPacket(ClientboundLevelChunkWithLightPacket packet) {
+        cachedChunkPackets.put(chunkKey(packet.getX(), packet.getZ()), packet);
+        while (cachedChunkPackets.size() > MAX_CACHED_CHUNKS) {
+            cachedChunkPackets.remove(cachedChunkPackets.firstEntry().getKey());
+        }
+    }
+
+    public Iterable<ClientboundLevelChunkWithLightPacket> cachedChunkPackets() {
+        return cachedChunkPackets.values();
+    }
+
+    public void clearChunkState() {
+        sentChunks.clear();
+        cachedChunkPackets.clear();
+    }
+
+    public List<Vector3i> drainSentChunks() {
+        List<Vector3i> chunks = List.copyOf(sentChunks.values());
+        sentChunks.clear();
+        return chunks;
     }
 
     public boolean isWithinHardLimit(Vector3d javaPosition) {

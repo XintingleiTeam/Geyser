@@ -38,6 +38,8 @@ import org.geysermc.geyser.level.physics.CollisionResult;
 import org.geysermc.geyser.session.GeyserSession;
 import org.geysermc.geyser.text.ChatColor;
 import org.geysermc.geyser.util.MathUtils;
+import org.geysermc.geyser.xtl.coordinate.CoordinateRebaseCoordinator;
+import org.geysermc.geyser.xtl.coordinate.CoordinateVirtualizer;
 import org.geysermc.mcprotocollib.network.packet.Packet;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.player.ServerboundMovePlayerPosPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.player.ServerboundMovePlayerPosRotPacket;
@@ -56,6 +58,10 @@ final class BedrockMovePlayer {
         // PlayerAuthInput coordinates belong to the current Bedrock window. Every cache and
         // collision calculation below must keep using Java-world coordinates instead.
         Vector3f javaPosition = session.getCoordinateVirtualizer().toJava(packet.getPosition()).toFloat();
+        CoordinateVirtualizer.RebasePlan rebase = session.getCoordinateVirtualizer().planRebase(entity.position().toDouble(), javaPosition.toDouble());
+        if (rebase != null) {
+            CoordinateRebaseCoordinator.rebase(session, rebase);
+        }
 
         // We need to save player interact rotation value, as this rotation is used for Touch device and indicate where the player is touching.
         // This is needed so that we can interact with where player actually touch on the screen on Bedrock and not just from the center of the screen.

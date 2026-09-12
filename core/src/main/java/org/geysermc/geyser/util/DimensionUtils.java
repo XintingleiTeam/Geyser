@@ -57,7 +57,7 @@ public class DimensionUtils {
         Entity player = session.getPlayerEntity();
 
         session.getChunkCache().clear();
-        session.getCoordinateVirtualizer().clearSentChunks();
+        session.getCoordinateVirtualizer().clearChunkState();
         session.getEntityCache().removeAllEntities();
         session.getItemFrameCache().clear();
         session.getLodestoneCache().clear();
