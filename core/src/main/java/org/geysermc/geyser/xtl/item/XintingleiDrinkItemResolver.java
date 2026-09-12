@@ -15,6 +15,9 @@ import org.geysermc.mcprotocollib.protocol.data.game.item.component.CustomModelD
 import org.geysermc.mcprotocollib.protocol.data.game.item.component.DataComponentTypes;
 import org.geysermc.mcprotocollib.protocol.data.game.item.component.DataComponents;
 
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+
 /**
  * Resolves the DrinksDataPack's honey-bottle variants before an old Fabric registry ID can
  * be mistaken for a newer vanilla or modded item by an intermediate protocol translator.
@@ -28,6 +31,7 @@ public final class XintingleiDrinkItemResolver {
     private static final String TRANSLATION_PREFIX = "item.drinks.";
     private static final int FIRST_MODEL_DATA = 1001;
     private static final int LAST_MODEL_DATA = 1018;
+    private static final Set<String> LOGGED_RESOLUTIONS = ConcurrentHashMap.newKeySet();
 
     private XintingleiDrinkItemResolver() {
     }
@@ -48,6 +52,10 @@ public final class XintingleiDrinkItemResolver {
         String bedrockIdentifier = DRINK_PREFIX + drinkId;
         for (ItemDefinition definition : session.getItemMappings().getItemDefinitions().values()) {
             if (bedrockIdentifier.equals(definition.getIdentifier())) {
+                if (LOGGED_RESOLUTIONS.add(drinkId)) {
+                    session.getGeyser().getLogger().info("[xintinglei-drinks] Resolved " + drinkId
+                        + " from the Java item component data.");
+                }
                 return new Resolution(base, definition);
             }
         }
@@ -61,17 +69,9 @@ public final class XintingleiDrinkItemResolver {
 
         // The custom name survives Java protocol translators more reliably than the newer
         // custom-model-data component. It is the authoritative fallback for existing stacks.
-        Component customName = components.get(DataComponentTypes.CUSTOM_NAME);
-        if (customName instanceof TranslatableComponent translatable
-            && translatable.key().startsWith(TRANSLATION_PREFIX)) {
-            return translatable.key().substring(TRANSLATION_PREFIX.length());
-        }
-        // ViaVersion may flatten an unknown translation to its key before Geyser receives the
-        // item. The Bedrock symptom is the literal `item.drinks.coffee` name; treat that exact
-        // plain-text representation as the same stable identity.
-        if (customName instanceof TextComponent text
-            && text.content().startsWith(TRANSLATION_PREFIX)) {
-            return text.content().substring(TRANSLATION_PREFIX.length());
+        String nameId = drinkIdFromName(components.get(DataComponentTypes.CUSTOM_NAME));
+        if (nameId != null) {
+            return nameId;
         }
 
         CustomModelData modelData = components.get(DataComponentTypes.CUSTOM_MODEL_DATA);
@@ -86,6 +86,28 @@ public final class XintingleiDrinkItemResolver {
         for (float value : modelData.floats()) {
             if (value >= FIRST_MODEL_DATA && value <= LAST_MODEL_DATA && value == Math.rint(value)) {
                 return idForModelData((int) value);
+            }
+        }
+        return null;
+    }
+
+    private static @Nullable String drinkIdFromName(@Nullable Component component) {
+        if (component == null) {
+            return null;
+        }
+        if (component instanceof TranslatableComponent translatable
+            && translatable.key().startsWith(TRANSLATION_PREFIX)) {
+            return translatable.key().substring(TRANSLATION_PREFIX.length());
+        }
+        // ViaVersion can flatten an unknown translation to its key and wrap it in an empty root
+        // component. Search every child rather than assuming the identifying component is root.
+        if (component instanceof TextComponent text && text.content().startsWith(TRANSLATION_PREFIX)) {
+            return text.content().substring(TRANSLATION_PREFIX.length());
+        }
+        for (Component child : component.children()) {
+            String childId = drinkIdFromName(child);
+            if (childId != null) {
+                return childId;
             }
         }
         return null;
