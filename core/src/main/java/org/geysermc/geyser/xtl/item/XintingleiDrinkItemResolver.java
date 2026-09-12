@@ -6,6 +6,7 @@ package org.geysermc.geyser.xtl.item;
 
 import org.checkerframework.checker.nullness.qual.Nullable;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.TranslatableComponent;
 import org.cloudburstmc.protocol.bedrock.data.definitions.ItemDefinition;
 import org.geysermc.geyser.registry.type.ItemMapping;
@@ -64,6 +65,13 @@ public final class XintingleiDrinkItemResolver {
         if (customName instanceof TranslatableComponent translatable
             && translatable.key().startsWith(TRANSLATION_PREFIX)) {
             return translatable.key().substring(TRANSLATION_PREFIX.length());
+        }
+        // ViaVersion may flatten an unknown translation to its key before Geyser receives the
+        // item. The Bedrock symptom is the literal `item.drinks.coffee` name; treat that exact
+        // plain-text representation as the same stable identity.
+        if (customName instanceof TextComponent text
+            && text.content().startsWith(TRANSLATION_PREFIX)) {
+            return text.content().substring(TRANSLATION_PREFIX.length());
         }
 
         CustomModelData modelData = components.get(DataComponentTypes.CUSTOM_MODEL_DATA);
