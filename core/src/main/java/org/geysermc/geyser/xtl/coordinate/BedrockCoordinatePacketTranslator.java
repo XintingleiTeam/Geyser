@@ -102,17 +102,16 @@ public final class BedrockCoordinatePacketTranslator {
             }
             moveEntityPacket.setPosition(coordinates.toBedrock(moveEntityPacket.getPosition()));
         } else if (packet instanceof MoveEntityDeltaPacket moveEntityPacket) {
-            if ((moveEntityPacket.getFlags().contains(MoveEntityDeltaPacket.Flag.HAS_X)
-                || moveEntityPacket.getFlags().contains(MoveEntityDeltaPacket.Flag.HAS_Z))
-                && !prepareEntityMove(session, moveEntityPacket.getRuntimeEntityId(),
-                Vector3f.from(moveEntityPacket.getX(), 0, moveEntityPacket.getZ()))) {
+            // MoveEntityDelta's X/Z fields are *deltas*, rather than world positions.
+            // An origin offset must never be applied to them: doing so turns an ordinary
+            // 0.1-block update into a 50,000-block jump after a page rebase.
+            //
+            // Unlike an absolute move, this packet cannot respawn an entity that was hidden
+            // outside the current window; wait for its next absolute update instead.
+            long geyserId = moveEntityPacket.getRuntimeEntityId();
+            if (geyserId != session.getPlayerEntity().geyserId()
+                && !coordinates.isEntityVisible(geyserId)) {
                 return false;
-            }
-            if (moveEntityPacket.getFlags().contains(MoveEntityDeltaPacket.Flag.HAS_X)) {
-                moveEntityPacket.setX(coordinates.toBedrock(Vector3f.from(moveEntityPacket.getX(), 0, 0)).getX());
-            }
-            if (moveEntityPacket.getFlags().contains(MoveEntityDeltaPacket.Flag.HAS_Z)) {
-                moveEntityPacket.setZ(coordinates.toBedrock(Vector3f.from(0, 0, moveEntityPacket.getZ())).getZ());
             }
         } else if (packet instanceof MovePlayerPacket movePlayerPacket) {
             movePlayerPacket.setPosition(coordinates.toBedrock(movePlayerPacket.getPosition()));
