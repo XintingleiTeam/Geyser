@@ -42,6 +42,7 @@ import org.geysermc.geyser.item.TooltipOptions;
 import org.geysermc.geyser.item.components.resolvable.ResolvableComponent;
 import org.geysermc.geyser.item.components.resolvable.ResolvableComponentGetter;
 import org.geysermc.geyser.item.enchantment.Enchantment;
+import org.geysermc.geyser.xtl.enchantment.CentifoliaEnchantmentAdapter;
 import org.geysermc.geyser.level.block.type.Block;
 import org.geysermc.geyser.registry.Registries;
 import org.geysermc.geyser.registry.type.ItemMapping;
@@ -304,14 +305,19 @@ public class Item {
     }
 
     protected final @Nullable NbtMap remapEnchantment(GeyserSession session, int enchantId, int level, BedrockItemBuilder builder) {
-        Enchantment enchantment = session.getRegistryCache().registry(JavaRegistries.ENCHANTMENT).byId(enchantId);
-        if (enchantment == null) {
+        var registry = session.getRegistryCache().registry(JavaRegistries.ENCHANTMENT);
+        var entry = registry.entryById(enchantId);
+        if (entry.isEmpty()) {
             GeyserImpl.getInstance().getLogger().debug("Unknown Java enchantment while NBT item translating: " + enchantId);
             return null;
         }
+        Enchantment enchantment = entry.get().data();
 
         BedrockEnchantment bedrockEnchantment = enchantment.bedrockEnchantment();
         if (bedrockEnchantment == null) {
+            if (CentifoliaEnchantmentAdapter.translate(entry.get().key(), level, builder, session.locale())) {
+                return null;
+            }
             String enchantmentTranslation = MinecraftLocale.getLocaleString(enchantment.description(), session.locale());
             addJavaOnlyEnchantment(session, builder, enchantmentTranslation, level);
             builder.addEnchantmentGlint();
