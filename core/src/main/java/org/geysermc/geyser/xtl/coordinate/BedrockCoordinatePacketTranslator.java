@@ -43,6 +43,15 @@ public final class BedrockCoordinatePacketTranslator {
     private BedrockCoordinatePacketTranslator() {
     }
 
+    /**
+     * Keeps the zero-origin path byte-for-byte on Geyser's normal outbound route. A level
+     * chunk is the sole exception: we retain its Java/client coordinate association so a later
+     * page rebase can unload the correct client chunk.
+     */
+    public static boolean requiresTranslation(GeyserSession session, BedrockPacket packet) {
+        return session.getCoordinateVirtualizer().hasOffset() || packet instanceof LevelChunkPacket;
+    }
+
     public static boolean translate(GeyserSession session, BedrockPacket packet) {
         CoordinateVirtualizer coordinates = session.getCoordinateVirtualizer();
         // Chunk unloads may arrive after a rebase. Remember their original client coordinate
