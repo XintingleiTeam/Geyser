@@ -407,7 +407,9 @@ public class WorldBorder {
         LevelEventPacket effectPacket = new LevelEventPacket();
         effectPacket.setPosition(Vector3f.from(x, y, z));
         effectPacket.setType(LevelEvent.PARTICLE_DENY_BLOCK);
-        session.getUpstream().sendPacket(effectPacket);
+        // Keep this on the session boundary so coordinate virtualization also applies to the
+        // visual border while collision continues using real Java-world coordinates.
+        session.sendUpstreamPacket(effectPacket);
     }
 
     /**
