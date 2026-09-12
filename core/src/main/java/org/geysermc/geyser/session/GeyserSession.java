@@ -187,6 +187,7 @@ import org.geysermc.geyser.session.cache.TagCache;
 import org.geysermc.geyser.session.cache.TeleportCache;
 import org.geysermc.geyser.session.cache.WorldBorder;
 import org.geysermc.geyser.session.cache.WorldCache;
+import org.geysermc.geyser.xtl.coordinate.CoordinateVirtualizer;
 import org.geysermc.geyser.session.cache.registry.JavaRegistries;
 import org.geysermc.geyser.session.cache.tags.DialogTag;
 import org.geysermc.geyser.session.cache.waypoint.GeyserWaypoint;
@@ -316,6 +317,12 @@ public class GeyserSession implements GeyserConnection, GeyserCommandSource {
     private final TagCache tagCache;
     private final WaypointCache waypointCache;
     private final WorldCache worldCache;
+
+    /**
+     * Xintinglei's per-player Bedrock coordinate window. It is intentionally separate from all
+     * world caches, which continue to store Java's real coordinates.
+     */
+    private final CoordinateVirtualizer coordinateVirtualizer = new CoordinateVirtualizer();
 
     /**
      * Handles block breaking and break animation progress caching.

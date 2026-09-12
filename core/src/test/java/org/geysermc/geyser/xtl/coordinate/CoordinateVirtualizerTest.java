@@ -1,0 +1,69 @@
+/*
+ * Copyright (c) 2026 Xintinglei
+ */
+
+package org.geysermc.geyser.xtl.coordinate;
+
+import org.cloudburstmc.math.vector.Vector3d;
+import org.cloudburstmc.math.vector.Vector3f;
+import org.cloudburstmc.math.vector.Vector3i;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+
+class CoordinateVirtualizerTest {
+
+    @Test
+    void normalBoundaryMovesOnePageAndPreservesRoundTrip() {
+        CoordinateVirtualizer virtualizer = new CoordinateVirtualizer();
+        Vector3d destination = Vector3d.from(40_000, 64, -40_000);
+
+        CoordinateVirtualizer.RebasePlan plan = virtualizer.planRebase(Vector3d.from(39_999, 64, -39_999), destination);
+        Assertions.assertNotNull(plan);
+        Assertions.assertEquals(50_000, plan.originX());
+        Assertions.assertEquals(-50_000, plan.originZ());
+        Assertions.assertEquals(CoordinateVirtualizer.RebaseReason.NORMAL_BOUNDARY, plan.reason());
+
+        virtualizer.apply(plan);
+        Vector3f bedrock = virtualizer.toBedrock(destination);
+        Assertions.assertEquals(-10_000, bedrock.getX());
+        Assertions.assertEquals(10_000, bedrock.getZ());
+        Assertions.assertEquals(destination, virtualizer.toJava(bedrock));
+    }
+
+    @Test
+    void longDistanceTeleportJumpsDirectlyToTargetPage() {
+        CoordinateVirtualizer virtualizer = new CoordinateVirtualizer();
+        Vector3d destination = Vector3d.from(2_023_417, 120, -2_023_417);
+
+        CoordinateVirtualizer.RebasePlan plan = virtualizer.planRebase(Vector3d.from(20_000, 120, -20_000), destination);
+        Assertions.assertNotNull(plan);
+        Assertions.assertEquals(2_000_000, plan.originX());
+        Assertions.assertEquals(-2_000_000, plan.originZ());
+        Assertions.assertEquals(CoordinateVirtualizer.RebaseReason.LONG_DISTANCE_TELEPORT, plan.reason());
+
+        virtualizer.apply(plan);
+        Vector3f bedrock = virtualizer.toBedrock(destination);
+        Assertions.assertEquals(23_417, bedrock.getX());
+        Assertions.assertEquals(-23_417, bedrock.getZ());
+        Assertions.assertTrue(virtualizer.isWithinHardLimit(destination));
+    }
+
+    @Test
+    void negativeCoordinatesUseCenteredPagesAndChunkOffsets() {
+        CoordinateVirtualizer virtualizer = new CoordinateVirtualizer();
+        virtualizer.apply(virtualizer.planInitialOrigin(Vector3d.from(-1, 64, -50_001), CoordinateVirtualizer.RebaseReason.DIMENSION_CHANGE));
+
+        Assertions.assertEquals(0, virtualizer.originX());
+        Assertions.assertEquals(-50_000, virtualizer.originZ());
+        Assertions.assertEquals(Vector3i.from(0, 0, 3_125), virtualizer.toBedrockChunk(0, 0));
+        Assertions.assertEquals(Vector3f.from(-1, 64, -1), virtualizer.toBedrock(Vector3d.from(-1, 64, -50_001)));
+    }
+
+    @Test
+    void unsafeCoordinatesAreDetectedBeforePacketsAreSent() {
+        CoordinateVirtualizer virtualizer = new CoordinateVirtualizer();
+        Assertions.assertTrue(virtualizer.isWithinHardLimit(Vector3d.from(65_535, 64, -65_535)));
+        Assertions.assertFalse(virtualizer.isWithinHardLimit(Vector3d.from(65_536, 64, 0)));
+        Assertions.assertFalse(virtualizer.isWithinHardLimit(Vector3d.from(0, 64, -65_536)));
+    }
+}
