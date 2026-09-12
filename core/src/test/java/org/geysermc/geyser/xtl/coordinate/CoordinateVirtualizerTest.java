@@ -66,4 +66,14 @@ class CoordinateVirtualizerTest {
         Assertions.assertFalse(virtualizer.isWithinHardLimit(Vector3d.from(65_536, 64, 0)));
         Assertions.assertFalse(virtualizer.isWithinHardLimit(Vector3d.from(0, 64, -65_536)));
     }
+
+    @Test
+    void forgottenChunkUsesTheWindowThatOriginallySentIt() {
+        CoordinateVirtualizer virtualizer = new CoordinateVirtualizer();
+        Vector3i firstWindowChunk = virtualizer.rememberSentChunk(125_000, -125_000);
+        virtualizer.apply(virtualizer.planInitialOrigin(Vector3d.from(2_000_000, 64, 2_000_000), CoordinateVirtualizer.RebaseReason.LONG_DISTANCE_TELEPORT));
+
+        Assertions.assertEquals(Vector3i.from(125_000, 0, -125_000), firstWindowChunk);
+        Assertions.assertEquals(firstWindowChunk, virtualizer.removeSentChunk(125_000, -125_000));
+    }
 }

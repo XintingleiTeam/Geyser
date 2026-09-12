@@ -190,7 +190,7 @@ public class BlockBreakHandler {
     protected void handleBlockBreakActions(PlayerAuthInputPacket packet) {
         for (int i = 0; i < packet.getPlayerActions().size(); i++) {
             PlayerBlockActionData actionData = packet.getPlayerActions().get(i);
-            Vector3i position = actionData.getBlockPosition();
+            Vector3i position = session.getCoordinateVirtualizer().toJava(actionData.getBlockPosition());
             // Worth noting: the bedrock client, as of version  1.21.101, sends weird values for the face, outside the [0;6] range, when sending ABORT_BREAK
             // Not sure why, but, blockFace isn't used for ABORT_BREAK, so it's fine
             // This is why blockFace is individually turned into a Direction in each of the switch statements, except for the ABORT_BREAK one
@@ -230,7 +230,7 @@ public class BlockBreakHandler {
                     // we can skip handling this action about the current position if the next action is also about it
                     if (Objects.equals(currentBlockPos, position) && i < packet.getPlayerActions().size() - 1) {
                         PlayerBlockActionData nextAction = packet.getPlayerActions().get(i + 1);
-                        if (Objects.equals(nextAction.getBlockPosition(), position)) {
+                        if (Objects.equals(session.getCoordinateVirtualizer().toJava(nextAction.getBlockPosition()), position)) {
                             continue;
                         }
                     }

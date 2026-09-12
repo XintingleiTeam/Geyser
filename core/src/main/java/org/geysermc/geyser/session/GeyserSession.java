@@ -177,6 +177,7 @@ import org.geysermc.geyser.session.cache.EntityCache;
 import org.geysermc.geyser.session.cache.EntityEffectCache;
 import org.geysermc.geyser.session.cache.FormCache;
 import org.geysermc.geyser.session.cache.InputCache;
+import org.geysermc.geyser.xtl.coordinate.BedrockCoordinatePacketTranslator;
 import org.geysermc.geyser.session.cache.LodestoneCache;
 import org.geysermc.geyser.session.cache.PistonCache;
 import org.geysermc.geyser.session.cache.PreferencesCache;
@@ -2146,6 +2147,7 @@ public class GeyserSession implements GeyserConnection, GeyserCommandSource {
      * @param packet the bedrock packet from the Cloudburst protocol lib
      */
     public void sendUpstreamPacket(BedrockPacket packet) {
+        BedrockCoordinatePacketTranslator.translate(this, packet);
         upstream.sendPacket(packet);
     }
 
@@ -2155,7 +2157,16 @@ public class GeyserSession implements GeyserConnection, GeyserCommandSource {
      * @param packet the bedrock packet from the Cloudburst protocol lib
      */
     public void sendUpstreamPacketImmediately(BedrockPacket packet) {
+        BedrockCoordinatePacketTranslator.translate(this, packet);
         upstream.sendPacketImmediately(packet);
+    }
+
+    /**
+     * Sends a packet whose coordinates have already been transformed for the active Bedrock
+     * window. This is reserved for unloading a chunk that belonged to a previous window.
+     */
+    public void sendUpstreamPacketVirtualized(BedrockPacket packet) {
+        upstream.sendPacket(packet);
     }
 
     /**

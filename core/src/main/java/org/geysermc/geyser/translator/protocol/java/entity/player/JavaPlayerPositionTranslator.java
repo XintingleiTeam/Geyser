@@ -38,6 +38,7 @@ import org.geysermc.geyser.translator.protocol.PacketTranslator;
 import org.geysermc.geyser.translator.protocol.Translator;
 import org.geysermc.geyser.util.ChunkUtils;
 import org.geysermc.geyser.util.MathUtils;
+import org.geysermc.geyser.xtl.coordinate.CoordinateVirtualizer;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.player.PositionElement;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.player.ClientboundPlayerPositionPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.level.ServerboundAcceptTeleportationPacket;
@@ -67,6 +68,19 @@ public class JavaPlayerPositionTranslator extends PacketTranslator<ClientboundPl
         float newYaw = packet.getYRot() + (packet.getRelatives().contains(PositionElement.Y_ROT) ? entity.getYaw() : 0);
 
         final int teleportId = packet.getId();
+
+        CoordinateVirtualizer coordinateVirtualizer = session.getCoordinateVirtualizer();
+        if (!session.isSpawned()) {
+            coordinateVirtualizer.apply(coordinateVirtualizer.planInitialOrigin(position, CoordinateVirtualizer.RebaseReason.SERVER_SWITCH));
+        } else {
+            CoordinateVirtualizer.RebasePlan rebase = coordinateVirtualizer.planRebase(entity.position().toDouble(), position);
+            if (rebase != null) {
+                coordinateVirtualizer.apply(rebase);
+                session.setLastChunkPosition(null);
+                session.getGeyser().getLogger().debug("Rebased Bedrock coordinate window to "
+                    + rebase.originX() + ", " + rebase.originZ() + " (" + rebase.reason() + ")");
+            }
+        }
 
         acceptTeleport(session, position, newYaw, newPitch, teleportId);
 

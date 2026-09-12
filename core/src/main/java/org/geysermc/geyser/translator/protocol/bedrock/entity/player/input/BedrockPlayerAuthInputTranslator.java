@@ -336,7 +336,7 @@ public final class BedrockPlayerAuthInputTranslator extends PacketTranslator<Pla
             Vector3d correctedMovement = session.getCollisionManager().correctMovementForCollisions(movement, box, true, false);
             vehicle.setOnGround(correctedMovement.getY() != movement.getY() && session.getPlayerEntity().getLastTickEndVelocity().getY() < 0);
 
-            Vector3f vehiclePosition = packet.getPosition().down(vehicle.getOffset());
+            Vector3f vehiclePosition = session.getCoordinateVirtualizer().toJava(packet.getPosition()).toFloat().down(vehicle.getOffset());
             Vector2f vehicleRotation = packet.getVehicleRotation();
             if (vehicleRotation == null) {
                 return; // If the client just got in or out of a vehicle for example.

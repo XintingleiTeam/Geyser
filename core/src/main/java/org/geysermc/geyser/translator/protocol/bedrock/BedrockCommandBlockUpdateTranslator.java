@@ -52,7 +52,7 @@ public class BedrockCommandBlockUpdateTranslator extends PacketTranslator<Comman
             boolean isConditional = packet.isConditional();
             boolean automatic = !packet.isRedstoneMode(); // Automatic = Always Active option in Java
             ServerboundSetCommandBlockPacket commandBlockPacket = new ServerboundSetCommandBlockPacket(
-                    packet.getBlockPosition(), command, mode, outputTracked, isConditional, automatic);
+                    session.getCoordinateVirtualizer().toJava(packet.getBlockPosition()), command, mode, outputTracked, isConditional, automatic);
             session.sendDownstreamGamePacket(commandBlockPacket);
         } else {
             ServerboundSetCommandMinecartPacket commandMinecartPacket = new ServerboundSetCommandMinecartPacket(

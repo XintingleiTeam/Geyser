@@ -53,18 +53,22 @@ final class BedrockMovePlayer {
         SessionPlayerEntity entity = session.getPlayerEntity();
         if (!session.isSpawned()) return;
 
+        // PlayerAuthInput coordinates belong to the current Bedrock window. Every cache and
+        // collision calculation below must keep using Java-world coordinates instead.
+        Vector3f javaPosition = session.getCoordinateVirtualizer().toJava(packet.getPosition()).toFloat();
+
         // We need to save player interact rotation value, as this rotation is used for Touch device and indicate where the player is touching.
         // This is needed so that we can interact with where player actually touch on the screen on Bedrock and not just from the center of the screen.
         entity.setBedrockInteractRotation(packet.getInteractRotation());
 
         // Ignore movement packets until Bedrock's position matches the teleported position
         if (session.getUnconfirmedTeleport() != null) {
-            session.confirmTeleport(packet.getPosition().down(VanillaEntities.PLAYER_ENTITY_OFFSET));
+            session.confirmTeleport(javaPosition.down(VanillaEntities.PLAYER_ENTITY_OFFSET));
             return;
         }
 
         // This is vanilla behaviour, LocalPlayer#sendPosition 1.21.8.
-        boolean actualPositionChanged = entity.bedrockPosition().distanceSquared(packet.getPosition()) > 4e-8;
+        boolean actualPositionChanged = entity.bedrockPosition().distanceSquared(javaPosition) > 4e-8;
 
         if (actualPositionChanged) {
             // Send book update before the player moves
@@ -126,7 +130,7 @@ final class BedrockMovePlayer {
         // Therefore, we're fixing this by allowing player to no clip to clip through the floor, not only this fixed the issue but
         // player y velocity should match java perfectly, much better than teleport player right down :)
         // Shouldn't mess with anything because beyond this point there is nothing to collide and not even entities since they're prob dead.
-        if (packet.getPosition().getY() - VanillaEntities.PLAYER_ENTITY_OFFSET < session.getBedrockDimension().minY() - 5) {
+        if (javaPosition.getY() - VanillaEntities.PLAYER_ENTITY_OFFSET < session.getBedrockDimension().minY() - 5) {
             // Ensuring that we still can collide with collidable entity that are also in the void (eg: boat, shulker)
             boolean possibleOnGround = false;
 
@@ -155,7 +159,7 @@ final class BedrockMovePlayer {
             session.setNoClip(!possibleOnGround);
         }
 
-        session.getWorldBorder().spawnOrMoveBorderCollision(packet.getPosition().down(VanillaEntities.PLAYER_ENTITY_OFFSET));
+        session.getWorldBorder().spawnOrMoveBorderCollision(javaPosition.down(VanillaEntities.PLAYER_ENTITY_OFFSET));
 
         // This takes into account no movement sent from the client, but the player is trying to move anyway.
         // (Press into a wall in a corner - you're trying to move but nothing actually happens)
@@ -177,12 +181,12 @@ final class BedrockMovePlayer {
 
             // Player position MUST be updated on our end, otherwise e.g. chunk loading breaks
             if (hasVehicle) {
-                entity.setPositionFromBedrockPos(packet.getPosition());
+                entity.setPositionFromBedrockPos(javaPosition);
                 session.getSkullCache().updateVisibleSkulls();
             }
         } else if (positionChangedAndShouldUpdate) {
-            if (isValidMove(session, entity.bedrockPosition(), packet.getPosition())) {
-                CollisionResult result = session.getCollisionManager().adjustBedrockPosition(packet.getPosition(), isOnGround, packet.getInputData().contains(PlayerAuthInputData.HANDLE_TELEPORT));
+            if (isValidMove(session, entity.bedrockPosition(), javaPosition)) {
+                CollisionResult result = session.getCollisionManager().adjustBedrockPosition(javaPosition, isOnGround, packet.getInputData().contains(PlayerAuthInputData.HANDLE_TELEPORT));
                 if (result != null) { // A null return value cancels the packet
                     Vector3d position = result.correctedMovement();
 
@@ -204,7 +208,7 @@ final class BedrockMovePlayer {
                         movePacket = new ServerboundMovePlayerPosPacket(isOnGround, horizontalCollision, position.getX(), position.getY(), position.getZ());
                     }
 
-                    entity.setPositionFromBedrockPos(packet.getPosition());
+                    entity.setPositionFromBedrockPos(javaPosition);
 
                     // Send final movement changes
                     session.sendDownstreamGamePacket(movePacket);

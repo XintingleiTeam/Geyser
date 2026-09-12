@@ -191,7 +191,7 @@ public class BedrockInventoryTransactionTranslator extends PacketTranslator<Inve
                 }
                 switch (packet.getActionType()) {
                     case 0 -> {
-                        final Vector3i packetBlockPosition = packet.getBlockPosition();
+                        final Vector3i packetBlockPosition = session.getCoordinateVirtualizer().toJava(packet.getBlockPosition());
                         Vector3i blockPos = BlockUtils.getBlockPosition(packetBlockPosition, Direction.getUntrusted(packet, InventoryTransactionPacket::getBlockFace));
 
                         if (session.getGeyser().config().gameplay().disableBedrockScaffolding()) {
@@ -233,7 +233,7 @@ public class BedrockInventoryTransactionTranslator extends PacketTranslator<Inve
 
                         // Bedrock sends block interact code for a Java entity so we send entity code back to Java
                         if (session.getBlockMappings().isItemFrame(packet.getBlockDefinition())) {
-                            Entity itemFrameEntity = ItemFrameEntity.getItemFrameEntity(session, packet.getBlockPosition());
+                            Entity itemFrameEntity = ItemFrameEntity.getItemFrameEntity(session, packetBlockPosition);
                             if (itemFrameEntity != null) {
                                 processEntityInteraction(session, packet, itemFrameEntity);
                                 break;
@@ -280,7 +280,7 @@ public class BedrockInventoryTransactionTranslator extends PacketTranslator<Inve
                         Block place checks end - client is good to go
                          */
 
-                        BlockState blockState = session.getGeyser().getWorldManager().blockAt(session, packet.getBlockPosition());
+                        BlockState blockState = session.getGeyser().getWorldManager().blockAt(session, packetBlockPosition);
 
                         // Buttons on Java Edition cannot be interacted with when they are powered
                         if (blockState.block() instanceof ButtonBlock && blockState.getValue(Properties.POWERED)) {
@@ -304,7 +304,7 @@ public class BedrockInventoryTransactionTranslator extends PacketTranslator<Inve
                         int sequence = session.getWorldCache().nextPredictionSequence();
                         session.getWorldCache().markPositionInSequence(blockPos);
                         ServerboundUseItemOnPacket blockPacket = new ServerboundUseItemOnPacket(
-                                packet.getBlockPosition(),
+                                packetBlockPosition,
                                 Direction.getUntrusted(packet, InventoryTransactionPacket::getBlockFace).mcpl(),
                                 Hand.MAIN_HAND,
                                 cursorX, cursorY, cursorZ,
@@ -363,14 +363,14 @@ public class BedrockInventoryTransactionTranslator extends PacketTranslator<Inve
                                 // Otherwise insufficient permissions
                                 if (session.getBlockMappings().getJigsawStates().contains(packet.getBlockDefinition())) {
                                     ContainerOpenPacket openPacket = new ContainerOpenPacket();
-                                    openPacket.setBlockPosition(packet.getBlockPosition());
+                                    openPacket.setBlockPosition(packetBlockPosition);
                                     openPacket.setId((byte) 1);
                                     openPacket.setType(ContainerType.JIGSAW_EDITOR);
                                     openPacket.setUniqueEntityId(-1);
                                     session.sendUpstreamPacket(openPacket);
                                 } else if (session.getBlockMappings().getStructureBlockStates().containsValue(packet.getBlockDefinition())) {
                                     ContainerOpenPacket openPacket = new ContainerOpenPacket();
-                                    openPacket.setBlockPosition(packet.getBlockPosition());
+                                    openPacket.setBlockPosition(packetBlockPosition);
                                     openPacket.setId((byte) 1);
                                     openPacket.setType(ContainerType.STRUCTURE_EDITOR);
                                     openPacket.setUniqueEntityId(-1);
@@ -542,7 +542,7 @@ public class BedrockInventoryTransactionTranslator extends PacketTranslator<Inve
             return;
         }
 
-        Vector3f clickPosition = packet.getClickPosition().sub(entity.bedrockPosition());
+        Vector3f clickPosition = session.getCoordinateVirtualizer().toJava(packet.getClickPosition()).toFloat().sub(entity.bedrockPosition());
         boolean isSpectator = session.getGameMode() == GameMode.SPECTATOR;
         for (Hand hand : EntityUtils.HANDS) {
             session.sendDownstreamGamePacket(new ServerboundInteractPacket(entity.getEntityId(),

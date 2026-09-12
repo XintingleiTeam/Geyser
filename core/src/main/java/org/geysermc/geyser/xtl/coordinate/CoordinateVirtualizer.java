@@ -26,6 +26,9 @@ import org.cloudburstmc.math.vector.Vector3d;
 import org.cloudburstmc.math.vector.Vector3f;
 import org.cloudburstmc.math.vector.Vector3i;
 
+import java.util.HashMap;
+import java.util.Map;
+
 /**
  * Per-session translation between the real Java world and the bounded coordinate window shown
  * to a Bedrock client.
@@ -47,6 +50,8 @@ public final class CoordinateVirtualizer {
 
     private long originX;
     private long originZ;
+    /** The exact virtual chunk coordinate last sent for each Java chunk. */
+    private final Map<Long, Vector3i> sentChunks = new HashMap<>();
 
     public CoordinateVirtualizer() {
         this(DEFAULT_PAGE_SIZE, DEFAULT_REBASE_THRESHOLD, DEFAULT_HARD_LIMIT, DEFAULT_LONG_DISTANCE_TELEPORT_THRESHOLD);
@@ -80,6 +85,18 @@ public final class CoordinateVirtualizer {
         return Vector3d.from(bedrockPosition.getX() + originX, bedrockPosition.getY(), bedrockPosition.getZ() + originZ);
     }
 
+    public Vector3i toBedrock(Vector3i javaPosition) {
+        return Vector3i.from(toBedrockBlockX(javaPosition.getX()), javaPosition.getY(), toBedrockBlockZ(javaPosition.getZ()));
+    }
+
+    public Vector3i toJava(Vector3i bedrockPosition) {
+        return Vector3i.from(
+            Math.toIntExact(bedrockPosition.getX() + originX),
+            bedrockPosition.getY(),
+            Math.toIntExact(bedrockPosition.getZ() + originZ)
+        );
+    }
+
     public Vector3i toBedrockChunk(int javaChunkX, int javaChunkZ) {
         return Vector3i.from(javaChunkX - originChunkX(), 0, javaChunkZ - originChunkZ());
     }
@@ -106,6 +123,29 @@ public final class CoordinateVirtualizer {
 
     public int originChunkZ() {
         return Math.toIntExact(originZ / 16);
+    }
+
+    public boolean hasOffset() {
+        return originX != 0 || originZ != 0;
+    }
+
+    public Vector3i rememberSentChunk(int javaChunkX, int javaChunkZ) {
+        Vector3i bedrockChunk = toBedrockChunk(javaChunkX, javaChunkZ);
+        sentChunks.put(chunkKey(javaChunkX, javaChunkZ), bedrockChunk);
+        return bedrockChunk;
+    }
+
+    /**
+     * Returns the client coordinate of a loaded Java chunk, then forgets it. Falling back to
+     * the active origin is correct for chunks which were never emitted by this session.
+     */
+    public Vector3i removeSentChunk(int javaChunkX, int javaChunkZ) {
+        Vector3i stored = sentChunks.remove(chunkKey(javaChunkX, javaChunkZ));
+        return stored != null ? stored : toBedrockChunk(javaChunkX, javaChunkZ);
+    }
+
+    public void clearSentChunks() {
+        sentChunks.clear();
     }
 
     public boolean isWithinHardLimit(Vector3d javaPosition) {
@@ -155,6 +195,10 @@ public final class CoordinateVirtualizer {
         // selected page instead, so a new session never immediately crosses the
         // rebase threshold merely because it started just below a page boundary.
         return Math.multiplyExact((long) Math.floor((coordinate + pageSize / 2d) / pageSize), pageSize);
+    }
+
+    private static long chunkKey(int x, int z) {
+        return ((long) x << 32) ^ (z & 0xffffffffL);
     }
 
     public enum RebaseReason {

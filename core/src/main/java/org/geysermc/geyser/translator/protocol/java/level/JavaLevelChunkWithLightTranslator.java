@@ -152,7 +152,7 @@ public class JavaLevelChunkWithLightTranslator extends PacketTranslator<Clientbo
                         // Check if block is piston or flower to see if we'll need to create additional block entities, as they're only block entities in Bedrock
                         if (state.block() instanceof BedrockChunkWantsBlockEntityTag blockEntity) {
                             bedrockBlockEntities.add(blockEntity.createTag(session,
-                                    Vector3i.from((packet.getX() << 4) + (yzx & 0xF), ((sectionY + yOffset) << 4) + ((yzx >> 8) & 0xF), (packet.getZ() << 4) + ((yzx >> 4) & 0xF)),
+                                    session.getCoordinateVirtualizer().toBedrock(Vector3i.from((packet.getX() << 4) + (yzx & 0xF), ((sectionY + yOffset) << 4) + ((yzx >> 8) & 0xF), (packet.getZ() << 4) + ((yzx >> 4) & 0xF))),
                                     state
                             ));
                         }
@@ -212,7 +212,7 @@ public class JavaLevelChunkWithLightTranslator extends PacketTranslator<Clientbo
                         if (bedrockOnlyBlockEntityIds.get(paletteId)) {
                             BlockState state = BlockState.of(javaPalette.idToState(paletteId));
                             bedrockBlockEntities.add(((BedrockChunkWantsBlockEntityTag) state.block()).createTag(session,
-                                    Vector3i.from((packet.getX() << 4) + (yzx & 0xF), ((sectionY + yOffset) << 4) + ((yzx >> 8) & 0xF), (packet.getZ() << 4) + ((yzx >> 4) & 0xF)),
+                                    session.getCoordinateVirtualizer().toBedrock(Vector3i.from((packet.getX() << 4) + (yzx & 0xF), ((sectionY + yOffset) << 4) + ((yzx >> 8) & 0xF), (packet.getZ() << 4) + ((yzx >> 4) & 0xF))),
                                     state
                             ));
                         }
@@ -289,7 +289,8 @@ public class JavaLevelChunkWithLightTranslator extends PacketTranslator<Clientbo
                 // The Java server can send block entity data for blocks that aren't actually those blocks.
                 // A Java client ignores these
                 if (type == blockState.block().blockEntityType()) {
-                    bedrockBlockEntities.add(blockEntityTranslator.getBlockEntityTag(session, type, x + chunkBlockX, y, z + chunkBlockZ, tag, blockState));
+                    Vector3i bedrockBlockEntityPosition = session.getCoordinateVirtualizer().toBedrock(Vector3i.from(x + chunkBlockX, y, z + chunkBlockZ));
+                    bedrockBlockEntities.add(blockEntityTranslator.getBlockEntityTag(session, type, bedrockBlockEntityPosition.getX(), bedrockBlockEntityPosition.getY(), bedrockBlockEntityPosition.getZ(), tag, blockState));
 
                     // Check for custom skulls
                     if (session.getPreferencesCache().showCustomSkulls() && type == BlockEntityType.SKULL && tag != null && tag.containsKey("profile")) {

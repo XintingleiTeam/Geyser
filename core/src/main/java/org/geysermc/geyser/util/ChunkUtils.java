@@ -159,6 +159,14 @@ public class ChunkUtils {
     }
 
     public static void sendEmptyChunk(GeyserSession session, int chunkX, int chunkZ, boolean forceUpdate) {
+        sendEmptyChunk(session, chunkX, chunkZ, forceUpdate, false);
+    }
+
+    /**
+     * @param coordinatesAlreadyVirtualized true when {@code chunkX/Z} were retained from a
+     *                                      previous Bedrock coordinate window for an unload.
+     */
+    public static void sendEmptyChunk(GeyserSession session, int chunkX, int chunkZ, boolean forceUpdate, boolean coordinatesAlreadyVirtualized) {
         BedrockDimension bedrockDimension = session.getBedrockDimension();
         int bedrockSubChunkCount = bedrockDimension.height() >> 4;
 
@@ -186,7 +194,11 @@ public class ChunkUtils {
         data.setSubChunksLength(0);
         data.setData(Unpooled.wrappedBuffer(payload));
         data.setCachingEnabled(false);
-        session.sendUpstreamPacket(data);
+        if (coordinatesAlreadyVirtualized) {
+            session.sendUpstreamPacketVirtualized(data);
+        } else {
+            session.sendUpstreamPacket(data);
+        }
 
         if (forceUpdate) {
             Vector3i pos = Vector3i.from(chunkX << 4, 80, chunkZ << 4);
@@ -194,7 +206,11 @@ public class ChunkUtils {
             blockPacket.setBlockPosition(pos);
             blockPacket.setDataLayer(0);
             blockPacket.setDefinition(session.getBlockMappings().getBedrockBlock(1));
-            session.sendUpstreamPacket(blockPacket);
+            if (coordinatesAlreadyVirtualized) {
+                session.sendUpstreamPacketVirtualized(blockPacket);
+            } else {
+                session.sendUpstreamPacket(blockPacket);
+            }
         }
     }
 

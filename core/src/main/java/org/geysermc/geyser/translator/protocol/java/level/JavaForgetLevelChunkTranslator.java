@@ -51,6 +51,7 @@ public class JavaForgetLevelChunkTranslator extends PacketTranslator<Clientbound
         }
         removedSkulls.forEach(session.getSkullCache()::removeSkull);
 
-        ChunkUtils.sendEmptyChunk(session, packet.getX(), packet.getZ(), false);
+        Vector3i bedrockChunk = session.getCoordinateVirtualizer().removeSentChunk(packet.getX(), packet.getZ());
+        ChunkUtils.sendEmptyChunk(session, bedrockChunk.getX(), bedrockChunk.getZ(), false, true);
     }
 }
