@@ -193,10 +193,10 @@ public final class ItemTranslator {
         // vanilla items. DrinksDataPack items are always honey bottles, so resolve their explicit
         // custom-model marker before using the numeric registry mapping. The extension then picks
         // the correct drinks:* Bedrock definition in the regular custom-item path below.
-        ItemMapping drinkBaseMapping = XintingleiDrinkItemResolver.resolve(session, customComponents);
-        if (drinkBaseMapping != null) {
-            javaItem = drinkBaseMapping.getJavaItem();
-            bedrockItem = drinkBaseMapping;
+        XintingleiDrinkItemResolver.Resolution drink = XintingleiDrinkItemResolver.resolve(session, customComponents);
+        if (drink != null) {
+            javaItem = drink.baseMapping().getJavaItem();
+            bedrockItem = drink.baseMapping();
         }
 
         BedrockItemBuilder nbtBuilder = new BedrockItemBuilder();
@@ -209,7 +209,9 @@ public final class ItemTranslator {
         javaItem.translateComponentsToBedrock(session, components, tooltip, nbtBuilder);
 
         Rarity rarity = Rarity.fromId(components.getOrDefault(DataComponentTypes.RARITY, 0));
-        String customName = getCustomName(session, customComponents, bedrockItem, rarity.getColor(), false, false);
+        // The Bedrock drink definition supplies the readable name. Forwarding the Java
+        // translation key as NBT would override it with literal `item.drinks.*` text.
+        String customName = drink == null ? getCustomName(session, customComponents, bedrockItem, rarity.getColor(), false, false) : null;
         if (customName != null) {
             PotionContents potionContents = components.get(DataComponentTypes.POTION_CONTENTS);
             // Make custom effect information visible when shown in tooltip
@@ -268,7 +270,12 @@ public final class ItemTranslator {
             translatePlayerHead(session, components.get(DataComponentTypes.PROFILE), builder);
         }
 
-        translateCustomItem(session, count, components, builder, bedrockItem);
+        if (drink != null) {
+            builder.definition(drink.definition());
+            builder.blockDefinition(null);
+        } else {
+            translateCustomItem(session, count, components, builder, bedrockItem);
+        }
 
         // Translate the canDestroy and canPlaceOn Java components
         AdventureModePredicate canDestroy = components.get(DataComponentTypes.CAN_BREAK);
