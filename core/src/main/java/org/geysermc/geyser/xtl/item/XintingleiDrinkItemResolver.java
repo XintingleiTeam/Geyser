@@ -31,6 +31,26 @@ public final class XintingleiDrinkItemResolver {
     private static final String TRANSLATION_PREFIX = "item.drinks.";
     private static final int FIRST_MODEL_DATA = 1001;
     private static final int LAST_MODEL_DATA = 1018;
+    private static final java.util.Map<String, String> PROTOCOL_BASE_ITEMS = java.util.Map.ofEntries(
+        java.util.Map.entry("minecraft:debug_stick", "coffee"),
+        java.util.Map.entry("minecraft:knowledge_book", "energy_drink"),
+        java.util.Map.entry("minecraft:end_crystal", "herbal_tea"),
+        java.util.Map.entry("minecraft:ender_eye", "berry_juice"),
+        java.util.Map.entry("minecraft:dragon_breath", "mint_cooler"),
+        java.util.Map.entry("minecraft:fire_charge", "miner_soda"),
+        java.util.Map.entry("minecraft:recovery_compass", "ocean_tonic"),
+        java.util.Map.entry("minecraft:goat_horn", "blaze_brew"),
+        java.util.Map.entry("minecraft:ominous_bottle", "monster_black"),
+        java.util.Map.entry("minecraft:wind_charge", "monster_white"),
+        java.util.Map.entry("minecraft:mace", "monster_green"),
+        java.util.Map.entry("minecraft:bundle", "monster_pink"),
+        java.util.Map.entry("minecraft:music_disc_5", "apple_carrot_juice"),
+        java.util.Map.entry("minecraft:music_disc_relic", "clear_soda"),
+        java.util.Map.entry("minecraft:disc_fragment_5", "vodka"),
+        java.util.Map.entry("minecraft:heart_of_the_sea", "almond_water"),
+        java.util.Map.entry("minecraft:nautilus_shell", "bean_juice"),
+        java.util.Map.entry("minecraft:command_block_minecart", "mega_boba_tea")
+    );
     private static final Set<String> LOGGED_RESOLUTIONS = ConcurrentHashMap.newKeySet();
 
     private XintingleiDrinkItemResolver() {
@@ -40,21 +60,30 @@ public final class XintingleiDrinkItemResolver {
      * @return the ordinary honey-bottle mapping and exact Bedrock definition if this is a
      * DrinksDataPack item, otherwise {@code null}.
      */
-    public static @Nullable Resolution resolve(GeyserSession session, @Nullable DataComponents components) {
-        String drinkId = drinkId(components);
+    public static @Nullable Resolution resolve(GeyserSession session, ItemMapping incomingMapping,
+                                                @Nullable DataComponents components) {
+        String drinkId = PROTOCOL_BASE_ITEMS.get(incomingMapping.getJavaItem().javaIdentifier());
+        ItemMapping base = incomingMapping;
+        if (drinkId == null) {
+            drinkId = drinkId(components);
+        }
         if (drinkId == null) {
             return null;
         }
-        ItemMapping base = session.getItemMappings().getMapping("minecraft:honey_bottle");
-        if (base == null) {
-            return null;
+        if (!PROTOCOL_BASE_ITEMS.containsKey(incomingMapping.getJavaItem().javaIdentifier())) {
+            // Backwards compatibility for stacks made before the protocol-stable overlay was
+            // installed. The new data pack always uses an entry from PROTOCOL_BASE_ITEMS.
+            base = session.getItemMappings().getMapping("minecraft:honey_bottle");
+            if (base == null) {
+                return null;
+            }
         }
         String bedrockIdentifier = DRINK_PREFIX + drinkId;
         for (ItemDefinition definition : session.getItemMappings().getItemDefinitions().values()) {
             if (bedrockIdentifier.equals(definition.getIdentifier())) {
                 if (LOGGED_RESOLUTIONS.add(drinkId)) {
                     session.getGeyser().getLogger().info("[xintinglei-drinks] Resolved " + drinkId
-                        + " from the Java item component data.");
+                        + " through the protocol-stable drink mapping.");
                 }
                 return new Resolution(base, definition);
             }
