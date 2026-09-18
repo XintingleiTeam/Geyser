@@ -79,13 +79,17 @@ public class JavaMerchantOffersTranslator extends PacketTranslator<ClientboundMe
     }
 
     public static void openMerchant(GeyserSession session, ClientboundMerchantOffersPacket packet, MerchantContainer merchantInventory) {
+        VisibleTradersLevel visibleTradersLevel = VisibleTradersLevel.decode(packet.getVillagerLevel());
+        int villagerLevel = visibleTradersLevel.villagerLevel();
+        int bedrockTradeTier = Math.max(villagerLevel - 1, 0);
+
         // Retrieve the fake villager involved in the trade, and update its metadata to match with the window information
         merchantInventory.setVillagerTrades(packet.getOffers());
         merchantInventory.setTradeExperience(packet.getVillagerXp());
 
         Entity villager = merchantInventory.getVillager();
         if (packet.isShowProgress()) {
-            villager.getMetadata().put(EntityDataTypes.TRADE_TIER, packet.getVillagerLevel() - 1);
+            villager.getMetadata().put(EntityDataTypes.TRADE_TIER, bedrockTradeTier);
             villager.getMetadata().put(EntityDataTypes.MAX_TRADE_TIER, 4);
         } else {
             // Don't show trade level for wandering traders
@@ -97,7 +101,7 @@ public class JavaMerchantOffersTranslator extends PacketTranslator<ClientboundMe
 
         // Construct the packet that opens the trading window
         UpdateTradePacket updateTradePacket = new UpdateTradePacket();
-        updateTradePacket.setTradeTier(packet.getVillagerLevel() - 1);
+        updateTradePacket.setTradeTier(bedrockTradeTier);
         updateTradePacket.setContainerId((short) packet.getContainerId());
         updateTradePacket.setContainerType(ContainerType.TRADE);
         updateTradePacket.setDisplayName(merchantInventory.getTitle());
@@ -108,13 +112,19 @@ public class JavaMerchantOffersTranslator extends PacketTranslator<ClientboundMe
         updateTradePacket.setTraderUniqueEntityId(villager.geyserId());
 
         NbtMapBuilder builder = NbtMap.builder();
-        boolean addExtraTrade = packet.isShowProgress() && packet.getVillagerLevel() < 5;
+        boolean addExtraTrade = packet.isShowProgress() && villagerLevel < 5;
         List<NbtMap> tags = new ArrayList<>(addExtraTrade ? packet.getOffers().size() + 1 : packet.getOffers().size());
         for (int i = 0; i < packet.getOffers().size(); i++) {
             VillagerTrade trade = packet.getOffers().get(i);
+            // VisibleTraders appends locked offers and stores the count of normally unlocked
+            // offers in bits 8-31 of villagerLevel. Bedrock only accepts trade tiers 0-4 and
+            // treats maxUses=0 as an unavailable offer, so expose the preview without allowing
+            // a selection that the Java server will reject.
+            boolean lockedByVisibleTraders = visibleTradersLevel.hasLockedOffers()
+                && i >= visibleTradersLevel.unlockedOfferCount();
             NbtMapBuilder recipe = NbtMap.builder();
             recipe.putInt("netId", i + 1);
-            recipe.putInt("maxUses", trade.isOutOfStock() ? 0 : trade.getMaxUses());
+            recipe.putInt("maxUses", lockedByVisibleTraders || trade.isOutOfStock() ? 0 : trade.getMaxUses());
             recipe.putInt("traderExp", trade.getXp());
             recipe.putFloat("priceMultiplierA", trade.getPriceMultiplier());
             recipe.putFloat("priceMultiplierB", 0.0f);
@@ -127,10 +137,10 @@ public class JavaMerchantOffersTranslator extends PacketTranslator<ClientboundMe
             recipe.putInt("buyCountB", trade.getItemCostB() != null ? Math.max(trade.getItemCostB().count(), 0) : 0);
 
             recipe.putInt("demand", trade.getDemand()); // Seems to have no effect
-            recipe.putInt("tier", packet.getVillagerLevel() > 0 ? packet.getVillagerLevel() - 1 : 0); // -1 crashes client
+            recipe.putInt("tier", bedrockTradeTier);
             recipe.put("buyA", getItemTag(session, toItemStack(trade.getItemCostA()), trade.getSpecialPriceDiff(), trade.getDemand(), trade.getPriceMultiplier()));
             recipe.put("buyB", getItemTag(session, toItemStack(trade.getItemCostB())));
-            recipe.putInt("uses", trade.getUses());
+            recipe.putInt("uses", lockedByVisibleTraders ? 0 : trade.getUses());
             recipe.putByte("rewardExp", (byte) 1);
             tags.add(recipe.build());
         }
@@ -163,6 +173,35 @@ public class JavaMerchantOffersTranslator extends PacketTranslator<ClientboundMe
 
         updateTradePacket.setOffers(builder.build());
         session.sendUpstreamPacket(updateTradePacket);
+    }
+
+    /**
+     * VisibleTraders 0.0.9 serializes its extra locked-offer count into the upper bits of the
+     * vanilla merchant level field: {@code (unlockedOffers << 8) | villagerLevel}. Java clients
+     * unpack this before rendering, whereas Bedrock clients crash when the packed value is used
+     * as a trade tier. A normal villager level is in the inclusive range 1-5.
+     */
+    private record VisibleTradersLevel(int villagerLevel, int unlockedOfferCount) {
+        private static final int LEVEL_MASK = 0xFF;
+        private static final int MIN_VILLAGER_LEVEL = 1;
+        private static final int MAX_VILLAGER_LEVEL = 5;
+
+        static VisibleTradersLevel decode(int packedLevel) {
+            int possibleLevel = packedLevel & LEVEL_MASK;
+            int unlockedOffers = packedLevel >>> 8;
+            if (unlockedOffers > 0 && possibleLevel >= MIN_VILLAGER_LEVEL && possibleLevel <= MAX_VILLAGER_LEVEL) {
+                return new VisibleTradersLevel(possibleLevel, unlockedOffers);
+            }
+
+            // Vanilla may use level 0 for traders without progression. Constrain unexpected
+            // third-party values as a final guard because a Bedrock trade tier outside 0-4 can
+            // crash the native client.
+            return new VisibleTradersLevel(MathUtils.constrain(packedLevel, 0, MAX_VILLAGER_LEVEL), 0);
+        }
+
+        boolean hasLockedOffers() {
+            return unlockedOfferCount > 0;
+        }
     }
 
     private static ItemStack toItemStack(VillagerTrade.ItemCost itemCost) {
