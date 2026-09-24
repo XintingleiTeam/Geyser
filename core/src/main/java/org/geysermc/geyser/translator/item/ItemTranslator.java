@@ -60,7 +60,6 @@ import org.geysermc.geyser.text.MinecraftLocale;
 import org.geysermc.geyser.translator.text.MessageTranslator;
 import org.geysermc.geyser.util.InventoryUtils;
 import org.geysermc.geyser.util.MinecraftKey;
-import org.geysermc.geyser.xtl.item.XintingleiDrinkItemResolver;
 import org.geysermc.mcprotocollib.auth.GameProfile;
 import org.geysermc.mcprotocollib.auth.texture.Texture;
 import org.geysermc.mcprotocollib.auth.texture.TextureType;
@@ -189,16 +188,6 @@ public final class ItemTranslator {
     }
 
     public static ItemData.@NonNull Builder translateToBedrock(GeyserSession session, Item javaItem, ItemMapping bedrockItem, int count, @Nullable DataComponents customComponents) {
-        // A 1.21.4 Fabric registry export can occupy IDs which a newer Java protocol assigns to
-        // vanilla items. DrinksDataPack items are always honey bottles, so resolve their explicit
-        // custom-model marker before using the numeric registry mapping. The extension then picks
-        // the correct drinks:* Bedrock definition in the regular custom-item path below.
-        XintingleiDrinkItemResolver.Resolution drink = XintingleiDrinkItemResolver.resolve(session, bedrockItem, customComponents);
-        if (drink != null) {
-            javaItem = drink.baseMapping().getJavaItem();
-            bedrockItem = drink.baseMapping();
-        }
-
         BedrockItemBuilder nbtBuilder = new BedrockItemBuilder();
 
         // Populates default components that aren't sent over the network
@@ -209,9 +198,7 @@ public final class ItemTranslator {
         javaItem.translateComponentsToBedrock(session, components, tooltip, nbtBuilder);
 
         Rarity rarity = Rarity.fromId(components.getOrDefault(DataComponentTypes.RARITY, 0));
-        // The Bedrock drink definition supplies the readable name. Forwarding the Java
-        // translation key as NBT would override it with literal `item.drinks.*` text.
-        String customName = drink == null ? getCustomName(session, customComponents, bedrockItem, rarity.getColor(), false, false) : null;
+        String customName = getCustomName(session, customComponents, bedrockItem, rarity.getColor(), false, false);
         if (customName != null) {
             PotionContents potionContents = components.get(DataComponentTypes.POTION_CONTENTS);
             // Make custom effect information visible when shown in tooltip
@@ -270,12 +257,7 @@ public final class ItemTranslator {
             translatePlayerHead(session, components.get(DataComponentTypes.PROFILE), builder);
         }
 
-        if (drink != null) {
-            builder.definition(drink.definition());
-            builder.blockDefinition(null);
-        } else {
-            translateCustomItem(session, count, components, builder, bedrockItem);
-        }
+        translateCustomItem(session, count, components, builder, bedrockItem);
 
         // Translate the canDestroy and canPlaceOn Java components
         AdventureModePredicate canDestroy = components.get(DataComponentTypes.CAN_BREAK);

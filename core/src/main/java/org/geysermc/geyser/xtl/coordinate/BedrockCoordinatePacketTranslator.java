@@ -77,8 +77,8 @@ public final class BedrockCoordinatePacketTranslator {
         } else if (packet instanceof ContainerOpenPacket containerOpenPacket) {
             containerOpenPacket.setBlockPosition(coordinates.toBedrock(containerOpenPacket.getBlockPosition()));
         } else if (packet instanceof SetSpawnPositionPacket spawnPositionPacket) {
-            spawnPositionPacket.setBlockPosition(coordinates.toBedrock(spawnPositionPacket.getBlockPosition()));
-            spawnPositionPacket.setSpawnPosition(coordinates.toBedrock(spawnPositionPacket.getSpawnPosition()));
+            spawnPositionPacket.setBlockPosition(coordinates.toBedrockSpawn(spawnPositionPacket.getBlockPosition()));
+            spawnPositionPacket.setSpawnPosition(coordinates.toBedrockSpawn(spawnPositionPacket.getSpawnPosition()));
         } else if (packet instanceof OpenSignPacket openSignPacket) {
             openSignPacket.setPosition(coordinates.toBedrock(openSignPacket.getPosition()));
         } else if (packet instanceof BlockEntityDataPacket blockEntityPacket) {

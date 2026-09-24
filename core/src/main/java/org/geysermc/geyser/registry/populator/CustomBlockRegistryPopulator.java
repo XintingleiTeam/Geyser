@@ -235,13 +235,7 @@ public class CustomBlockRegistryPopulator {
         int maxCustomRuntimeID = BlockRegistries.NON_VANILLA_BLOCK_STATE_OVERRIDES.get().keySet().stream().max(Comparator.comparing(JavaBlockState::javaId)).orElseThrow().javaId();
 
         if (MIN_CUSTOM_RUNTIME_ID < vanillaRuntimeIdCount) {
-            /*
-             * A 1.21.4 Fabric backend numbers mod states immediately after that
-             * version's vanilla palette. A newer Geyser palette has since added
-             * vanilla states in the same numeric range. The backend cannot send
-             * those newer states, so Xintinglei manifests replace explicit IDs only.
-             */
-            GeyserImpl.getInstance().getLogger().info("Registering legacy Fabric block states inside the newer vanilla runtime-ID range.");
+            throw new IllegalArgumentException("Custom block state IDs overlap vanilla IDs; update the Xintinglei extension and ViaVersion together.");
         }
 
         JAVA_BLOCKS_SIZE = Math.max(vanillaRuntimeIdCount, maxCustomRuntimeID + 1); // Runtime ids start at 0

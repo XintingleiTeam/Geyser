@@ -13,6 +13,33 @@ import org.junit.jupiter.api.Test;
 class CoordinateVirtualizerTest {
 
     @Test
+    void defaultSpawnPacketPreservesProtocolSentinel() {
+        CoordinateVirtualizer virtualizer = new CoordinateVirtualizer();
+        virtualizer.apply(virtualizer.planInitialOrigin(Vector3d.from(50_000, 64, 50_000), CoordinateVirtualizer.RebaseReason.DIMENSION_CHANGE));
+        var session = org.mockito.Mockito.mock(org.geysermc.geyser.session.GeyserSession.class);
+        org.mockito.Mockito.when(session.getCoordinateVirtualizer()).thenReturn(virtualizer);
+        var packet = new org.cloudburstmc.protocol.bedrock.packet.SetSpawnPositionPacket();
+        packet.setBlockPosition(Vector3i.from(32, 64, 32));
+        Vector3i sentinel = packet.getSpawnPosition();
+        Assertions.assertTrue(BedrockCoordinatePacketTranslator.translate(session, packet));
+        Assertions.assertEquals(sentinel, packet.getSpawnPosition());
+        Assertions.assertEquals(Vector3i.from(-49_968, 64, -49_968), packet.getBlockPosition());
+    }
+
+    @Test
+    void unsetSpawnSurvivesPositiveAndNegativeRebases() {
+        Vector3i unset = Vector3i.from(Integer.MIN_VALUE, Integer.MIN_VALUE, Integer.MIN_VALUE);
+        for (int x : new int[]{-29_000_000, -50_000, 0, 50_000, 29_000_000}) {
+            CoordinateVirtualizer virtualizer = new CoordinateVirtualizer();
+            virtualizer.apply(virtualizer.planInitialOrigin(Vector3d.from(x, 64, -x), CoordinateVirtualizer.RebaseReason.DIMENSION_CHANGE));
+            Assertions.assertEquals(unset, virtualizer.toBedrockSpawn(unset));
+            Assertions.assertNull(virtualizer.toBedrockSpawn(null));
+            Vector3i real = Vector3i.from(x + 32, 64, -x + 32);
+            Assertions.assertEquals(real, virtualizer.toJava(virtualizer.toBedrockSpawn(real)));
+        }
+    }
+
+    @Test
     void normalBoundaryMovesOnePageAndPreservesRoundTrip() {
         CoordinateVirtualizer virtualizer = new CoordinateVirtualizer();
         Vector3d destination = Vector3d.from(40_000, 64, -40_000);

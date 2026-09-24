@@ -108,20 +108,6 @@ public class CustomItemRegistryPopulator {
     private static final AttackRange DEFAULT_ATTACK_RANGE = new AttackRange(0.0F, 3.0F, 0.0F, 5.0F, 0.3F, 1.0F);
     private static final UseEffects DEFAULT_USE_EFFECTS = new UseEffects(false, true, 0.2F);
 
-    /**
-     * The Xintinglei compatibility manifest uses the Java 1.21.4 registry IDs
-     * from the Fabric server. Newer Geyser builds contain additional vanilla
-     * items, so those legacy IDs can be below the current item table size.
-     * These namespaces are our explicitly supported compatibility mappings;
-     * other extensions retain the normal collision protection below.
-     */
-    private static final Set<String> XINTINGLEI_LEGACY_ITEM_NAMESPACES = Set.of(
-        "better_mcdonalds_mod",
-        "happy_ghast_legacy",
-        "thecopperrail",
-        "centifolia"
-    );
-
     public static void populate(Map<String, GeyserMappingItem> items, Multimap<Identifier, CustomItemDefinition> customItems,
                                 Multimap<Identifier, NonVanillaCustomItemDefinition> nonVanillaCustomItems) {
         if (!GeyserImpl.getInstance().config().gameplay().enableCustomContent()) {
@@ -156,7 +142,7 @@ public class CustomItemRegistryPopulator {
                     throw new CustomItemDefinitionRegisterException("Non-vanilla custom item definition (identifier=" + definition.identifier() + ") is attempting to masquerade as a vanilla Minecraft item!");
                 } else if (definition.bedrockIdentifier().vanilla()) {
                     throw new CustomItemDefinitionRegisterException("Non-vanilla custom item definition (identifier=" + definition.identifier() + ")' bedrock identifier's namespace is minecraft!");
-                } else if (definition.javaId() < items.size() && !isXintingleiLegacyItem(definition)) {
+                } else if (definition.javaId() < items.size()) {
                     throw new CustomItemDefinitionRegisterException("Non-vanilla custom item definition (identifier=" + definition.identifier() + ") is attempting to overwrite a vanilla Minecraft item! (item network ID taken)");
                 }
 
@@ -174,10 +160,6 @@ public class CustomItemRegistryPopulator {
         if (customItemCount > 0) {
             GeyserImpl.getInstance().getLogger().info("Registered " + customItemCount + " custom items");
         }
-    }
-
-    private static boolean isXintingleiLegacyItem(NonVanillaCustomItemDefinition definition) {
-        return XINTINGLEI_LEGACY_ITEM_NAMESPACES.contains(definition.identifier().namespace());
     }
 
     public static GeyserCustomMappingData registerCustomItem(Item javaItem, GeyserMappingItem vanillaMapping, CustomItemDefinition customItem,

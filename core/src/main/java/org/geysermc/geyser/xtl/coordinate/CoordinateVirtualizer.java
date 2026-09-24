@@ -99,6 +99,15 @@ public final class CoordinateVirtualizer {
         return Vector3i.from(toBedrockBlockX(javaPosition.getX()), javaPosition.getY(), toBedrockBlockZ(javaPosition.getZ()));
     }
 
+    /** The protocol uses MIN_VALUE in all axes for an unset secondary spawn. */
+    public Vector3i toBedrockSpawn(Vector3i position) {
+        if (position == null || (position.getX() == Integer.MIN_VALUE
+            && position.getY() == Integer.MIN_VALUE && position.getZ() == Integer.MIN_VALUE)) {
+            return position;
+        }
+        return toBedrock(position);
+    }
+
     public Vector3i toJava(Vector3i bedrockPosition) {
         return Vector3i.from(
             Math.toIntExact(bedrockPosition.getX() + originX),
